@@ -6,6 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "BlasterPlayerController.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHighPingDelegate, bool, bPingTooHigh);
+
 /**
  * 
  */
@@ -33,9 +35,16 @@ public:
 	void OnMatchStateSet(FName State);
 	void HandleMatchHasStarted();
 	void HandleCooldown();
+
+	float SingleTripTime = 0;
+	FHighPingDelegate HighPingDelegate;
+
+	void BroadcastElim(class APlayerState* Attacker, APlayerState* Victim);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void SetupInputComponent() override;
 	void SetHUDTime();
 	void PollInit();
 
@@ -70,10 +79,27 @@ protected:
 	void HighPingWarning();
 	void StopHighPingWarning();
 	void CheckPing(float DeltaTime);
+
+	void ShowReturnToMainMenu();
+
+	UFUNCTION(Client, Reliable)
+	void ClientElimAnnouncement(APlayerState* Attacker, APlayerState* Victim);
 private:
 
 	UPROPERTY()
 	class ABlasterHUD* BlasterHUD;
+
+	/*
+	* Return to main menu
+	*/
+
+	UPROPERTY(EditAnywhere, Category = Menu)
+	TSubclassOf<class UUserWidget> ReturnToMainMenuWidget;
+
+	UPROPERTY()
+	class UReturnToMainMenu* ReturnToMainMenu;
+
+	bool bReturnToMainMenuOpen = false;
 
 	UPROPERTY()
 	class ABlasterGameMode* BlasterGameMode;
@@ -119,6 +145,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	float CheckPingFrequency = 20.f;
+
+	UFUNCTION(Server, Reliable)
+	void ServerReportPingStatus(bool bHighPing);
 
 	UPROPERTY(EditAnywhere)
 	float HighPingThreshold = 50.f;

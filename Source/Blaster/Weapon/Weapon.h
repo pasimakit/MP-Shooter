@@ -135,6 +135,22 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 	float SphereRadius = 75.f;
 
+	UPROPERTY(EditAnywhere)
+	float Damage = 20.f;
+
+	UPROPERTY(EditAnywhere)
+	float HeadshotDamage = 40.f;
+
+	UPROPERTY(Replicated, EditAnywhere)
+	bool bUseServerSideRewind = false;
+
+	UPROPERTY()
+	class ABlasterCharacter* BlasterOwnerCharacter;
+	UPROPERTY()
+	class ABlasterPlayerController* BlasterOwnerController;
+	UFUNCTION()
+	void OnPingTooHigh(bool bPingTooHigh);
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	USkeletalMeshComponent* WeaponMesh;
@@ -157,21 +173,23 @@ private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class ACasing> CasingClass;
 
-	UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_Ammo)
+	UPROPERTY(EditAnywhere)
 	int32 Ammo;
 
-	UFUNCTION()
-	void OnRep_Ammo();
+	UFUNCTION(Client, Reliable)
+	void ClientUpdateAmmo(int32 ServerAmmo);
+
+	UFUNCTION(Client, Reliable)
+	void ClientAddAmmo(int32 AmmoToAdd);
 
 	void SpendRound();
 
 	UPROPERTY(EditAnywhere)
 	int32 MagCapacity;
 
-	UPROPERTY()
-	class ABlasterCharacter* BlasterOwnerCharacter;
-	UPROPERTY()
-	class ABlasterPlayerController* BlasterOwnerController;
+	// The number of unprocessed server requests for ammo
+	// Incremented in SpendRound, decremented ClientUpdateAmmo
+	int32 Sequence = 0;
 
 	UPROPERTY(EditAnywhere)
 	EWeaponType WeaponType;
@@ -187,4 +205,6 @@ public:
 	FORCEINLINE EWeaponType GetWeaponType() const { return WeaponType; }
 	FORCEINLINE int32 GetAmmo() const { return Ammo; }
 	FORCEINLINE int32 GetMagCapacity() const { return MagCapacity; }
+	FORCEINLINE float GetDamage() const { return Damage; }
+	FORCEINLINE float GetHeadshotDamage() const { return HeadshotDamage; }
 };

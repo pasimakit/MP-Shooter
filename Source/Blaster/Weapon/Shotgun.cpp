@@ -4,10 +4,12 @@
 #include "Shotgun.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Blaster/Character/BlasterCharacter.h"
+#include "Blaster/PlayerController/BlasterPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Sound/SoundCue.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Blaster/BlasterComponents/LagCompensationComponent.h"
 
 void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 {
@@ -26,6 +28,7 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 
 		// Maps hit characters to number of times hit
 		TMap<ABlasterCharacter*, uint32> HitMap;
+		TMap<ABlasterCharacter*, uint32> HeadshotHitMap;
 		for (FVector_NetQuantize HitTarget : HitTargets)
 		{
 			FHitResult FireHit;
@@ -34,14 +37,19 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 			ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(FireHit.GetActor());
 			if (BlasterCharacter)
 			{
-				if (HitMap.Contains(BlasterCharacter))
+				const bool bHeadShot = FireHit.BoneName.ToString() == FString("head");
+
+				if (bHeadShot)
 				{
-					HitMap[BlasterCharacter]++;
+					if (HeadshotHitMap.Contains(BlasterCharacter)) HeadshotHitMap[BlasterCharacter]++;
+					else HeadshotHitMap.Emplace(BlasterCharacter, 1);
 				}
 				else
 				{
-					HitMap.Emplace(BlasterCharacter, 1);
+					if (HitMap.Contains(BlasterCharacter)) HitMap[BlasterCharacter]++;
+					else HitMap.Emplace(BlasterCharacter, 1);
 				}
+
 			}
 
 			if (ImpactParticles)
@@ -64,16 +72,60 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 				);
 			}
 		}
+		TArray<ABlasterCharacter*> HitCharacters;
+
+		// Maps character total damage hit
+		TMap<ABlasterCharacter*, uint32> DamageMap;
+		// Bodyshot damage per character
 		for (auto HitPair : HitMap)
 		{
-			if (HitPair.Key && HasAuthority() && InstigatorController)
+			if (HitPair.Key && InstigatorController)
 			{
-				UGameplayStatics::ApplyDamage(
-					HitPair.Key,
-					HitPair.Value * Damage,
-					InstigatorController,
-					this,
-					UDamageType::StaticClass()
+				DamageMap.Emplace(HitPair.Key, HitPair.Value * Damage);
+
+				HitCharacters.AddUnique(HitPair.Key);
+			}
+		}
+		// Headshot damage per character
+		for (auto HeadshotHitPair : HeadshotHitMap)
+		{
+			if (HeadshotHitPair.Key && InstigatorController)
+			{
+				if (DamageMap.Contains(HeadshotHitPair.Key)) DamageMap[HeadshotHitPair.Key] += HeadshotHitPair.Value * HeadshotDamage;
+				else DamageMap.Emplace(HeadshotHitPair.Key, HeadshotHitPair.Value * HeadshotDamage);
+
+				HitCharacters.AddUnique(HeadshotHitPair.Key);
+			}
+		}
+		// Apply damage to characters
+		for (auto DamagePair : DamageMap)
+		{
+			if (DamagePair.Key && InstigatorController)
+			{
+				bool bCauseAuthDamage = OwnerPawn->IsLocallyControlled() || !bUseServerSideRewind;
+				if (HasAuthority() && bCauseAuthDamage)
+				{
+					UGameplayStatics::ApplyDamage(
+						DamagePair.Key,
+						DamagePair.Value,
+						InstigatorController,
+						this,
+						UDamageType::StaticClass()
+					);
+				}
+			}
+		}
+		if (!HasAuthority() && bUseServerSideRewind)
+		{
+			BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(OwnerPawn) : BlasterOwnerCharacter;
+			BlasterOwnerController = BlasterOwnerController == nullptr ? Cast<ABlasterPlayerController>(InstigatorController) : BlasterOwnerController;
+			if (BlasterOwnerController && BlasterOwnerCharacter && BlasterOwnerCharacter->GetLagCompensation() && BlasterOwnerCharacter->IsLocallyControlled())
+			{
+				BlasterOwnerCharacter->GetLagCompensation()->ShotgunServerScoreRequest(
+					HitCharacters,
+					Start,
+					HitTargets,
+					BlasterOwnerController->GetServerTime() - BlasterOwnerController->SingleTripTime
 				);
 			}
 		}

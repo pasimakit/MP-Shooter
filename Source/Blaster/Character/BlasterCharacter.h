@@ -10,6 +10,8 @@
 #include "Blaster/BlasterTypes/CombatState.h"
 #include "BlasterCharacter.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
+
 UCLASS()
 class BLASTER_API ABlasterCharacter : public ACharacter, public IInteractWithCrosshairsInterface
 {
@@ -21,18 +23,22 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PostInitializeComponents() override;
+
 	void PlayFireMontage(bool bAiming);
 	void PlayReloadMontage();
 	void PlayElimMontage();
 	void PlayThrowGrenadeMontage();
+	void PlaySwapMontage();
+
 	virtual void OnRep_ReplicatedMovement() override;
-	void Elim();
+	void Elim(bool bPlayerLeftGame);
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastElim();
+	void MulticastElim(bool bPlayerLeftGame);
 	virtual void Destroyed() override;
 	void UpdateHUDHealth();
 	void UpdateHUDShield();
 	void UpdateHUDAmmo();
+	void SpawnDefaultWeapon();
 	
 	UPROPERTY(Replicated)
 	bool bDisableGameplay = false;
@@ -40,7 +46,21 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void ShowSniperScopeWidget(bool bShowScope);
 
-	void SpawnDefaultWeapon();
+
+	UPROPERTY()
+	TMap<FName, class UBoxComponent*> HitCollisionBoxes;
+
+	bool bFinishedSwapping = false;
+
+	UFUNCTION(Server, Reliable)
+	void ServerLeaveGame();
+
+	FOnLeftGame OnLeftGame;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastGainedTheLead();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastLostTheLead();
 
 protected:
 	virtual void BeginPlay() override;
@@ -71,6 +91,65 @@ protected:
 	// Poll for any relevant classes and iniatialize HUD
 	void PollInit();
 	void RotateInPlace(float DeltaTime);
+
+	/*
+	* Hit boxes for server-side rewind
+	*/
+
+	UPROPERTY(EditAnywhere)
+	class UBoxComponent* head;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* pelvis;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* spine_02;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* spine_03;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* upperarm_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* upperarm_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* lowerarm_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* lowerarm_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* hand_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* hand_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* backpack;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* blanket;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* thigh_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* thigh_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* calf_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* calf_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* foot_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* foot_r;
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	class USpringArmComponent* CameraBoom;
@@ -92,6 +171,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	class UBuffComponent* Buff;
+
+	UPROPERTY(VisibleAnywhere)
+	class ULagCompensationComponent* LagCompensation;
 
 	UFUNCTION(Server, Reliable)
 	void ServerEquipButtonPressed();
@@ -121,6 +203,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = Combat)
 	class UAnimMontage* ThrowGrenadeMontage;
+
+	UPROPERTY(EditAnywhere, Category = Combat)
+	class UAnimMontage* SwapMontage;
 
 	void HideCameraIfCharacterClose();
 
@@ -169,6 +254,7 @@ private:
 
 	void ElimTimerFinished();
 
+	bool bLeftGame = false;
 	/*
 	* Dissolve effect
 	*/
@@ -191,7 +277,7 @@ private:
 	UMaterialInstance* DissolveMaterialInstance;
 
 	/**
-	* Elim bot
+	* Elim effects
 	*/
 
 	UPROPERTY(EditAnywhere)
@@ -206,16 +292,18 @@ private:
 	UPROPERTY()
 	class ABlasterPlayerState* BlasterPlayerState;
 
+	UPROPERTY(EditAnywhere)
+	class UNiagaraSystem* CrownSystem;
+
+	UPROPERTY()
+	class UNiagaraComponent* CrownComponent;
+
 	/*
 	* Grenade
 	*/
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* AttachedGrenade;
-
-	/*
-	* 
-	*/
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AWeapon> DefaultWeaponClass;
@@ -244,4 +332,6 @@ public:
 	FORCEINLINE float GetShield() const { return Shield; }
 	FORCEINLINE void SetShield(float Amount) { Shield = Amount; }
 	FORCEINLINE float GetMaxShield() const { return MaxShield; }
+	bool IsLocallyReloading();
+	FORCEINLINE ULagCompensationComponent* GetLagCompensation() const { return LagCompensation; }
 };

@@ -5,6 +5,7 @@
 #include "BlasterPlayerController.h"
 #include "Blaster/HUD/BlasterHUD.h"
 #include "Blaster/HUD/CharacterOverlay.h"
+#include "Blaster/HUD/ReturnToMainMenu.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Blaster/Character/BlasterCharacter.h"
@@ -32,6 +33,15 @@ void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(ABlasterPlayerController, MatchState);
 }
 
+void ABlasterPlayerController::SetupInputComponent()
+{
+	Super::SetupInputComponent();
+
+	if (InputComponent == nullptr) return;
+
+	InputComponent->BindAction("Quit", IE_Pressed, this, &ABlasterPlayerController::ShowReturnToMainMenu);
+}
+
 void ABlasterPlayerController::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -51,10 +61,15 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 		PlayerState = PlayerState == nullptr ? GetPlayerState<APlayerState>() : PlayerState;
 		if (PlayerState)
 		{
-			if (PlayerState->GetPingInMilliseconds() > HighPingThreshold)
+			if (PlayerState->GetCompressedPing() * 4 > HighPingThreshold)
 			{
 				HighPingWarning();
 				PingAnimationRunningTime = 0.f;
+				ServerReportPingStatus(true);
+			}
+			else
+			{
+				ServerReportPingStatus(false);
 			}
 		}
 		HighPingRunningTime = 0.f;
@@ -72,6 +87,33 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 			StopHighPingWarning();
 		}
 	}
+}
+
+void ABlasterPlayerController::ShowReturnToMainMenu()
+{
+	if (ReturnToMainMenuWidget == nullptr) return;
+	if (ReturnToMainMenu == nullptr)
+	{
+		ReturnToMainMenu = CreateWidget<UReturnToMainMenu>(this, ReturnToMainMenuWidget);
+	}
+	if (ReturnToMainMenu)
+	{
+		bReturnToMainMenuOpen = !bReturnToMainMenuOpen;
+		if (bReturnToMainMenuOpen)
+		{
+			ReturnToMainMenu->MenuSetup();
+		}
+		else
+		{
+			ReturnToMainMenu->MenuTeardown();
+		}
+	}
+
+}
+
+void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighPing)
+{
+	HighPingDelegate.Broadcast(bHighPing);
 }
 
 void ABlasterPlayerController::PollInit()
@@ -410,7 +452,8 @@ void ABlasterPlayerController::ServerRequestServerTime_Implementation(float Time
 void ABlasterPlayerController::ClientReportServerTime_Implementation(float TimeOfClientRequest, float TimeServerReceivedClientRequest)
 {
 	float RoundTripTime = GetWorld()->GetTimeSeconds() - TimeOfClientRequest;
-	float CurrentServerTime = TimeServerReceivedClientRequest + RoundTripTime / 2.f;
+	SingleTripTime = RoundTripTime * 0.5f;
+	float CurrentServerTime = TimeServerReceivedClientRequest + SingleTripTime;
 	ClientServerDelta = CurrentServerTime - GetWorld()->GetTimeSeconds();
 }
 
@@ -518,5 +561,43 @@ void ABlasterPlayerController::HandleCooldown()
 	{
 		BlasterCharacter->bDisableGameplay = true;
 		BlasterCharacter->GetCombat()->FireButtonPressed(false);
+	}
+}
+
+void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerState* Victim)
+{
+	ClientElimAnnouncement(Attacker, Victim);
+}
+
+
+void ABlasterPlayerController::ClientElimAnnouncement_Implementation(APlayerState* Attacker, APlayerState* Victim)
+{
+	APlayerState* Self = GetPlayerState<APlayerState>();
+	if (Attacker && Victim && Self)
+	{
+		BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+		if (BlasterHUD)
+		{
+			if (Attacker == Self && Victim != Self)
+			{
+				BlasterHUD->AddElimAnnouncement("You", Victim->GetPlayerName());
+				return;
+			}
+			if (Victim == Self && Attacker != Self)
+			{
+				BlasterHUD->AddElimAnnouncement(Attacker->GetPlayerName(), "you");
+				return;
+			}
+			if (Attacker == Victim && Attacker == Self)
+			{
+				BlasterHUD->AddElimAnnouncement("You", "yourself");
+				return;
+			}
+			if (Attacker == Victim && Attacker != Self)
+			{
+				BlasterHUD->AddElimAnnouncement(Attacker->GetPlayerName(), "themselves");
+			}
+			BlasterHUD->AddElimAnnouncement(Attacker->GetPlayerName(), Victim->GetPlayerName());
+		}
 	}
 }
