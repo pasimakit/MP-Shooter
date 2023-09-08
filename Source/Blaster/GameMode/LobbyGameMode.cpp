@@ -3,20 +3,44 @@
 
 #include "LobbyGameMode.h"
 #include "GameFramework/GameStateBase.h"
+#include "MultiplayerSessionsSubsystem.h"
 
 void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
 	int32 NumberOfPlayers = GameState.Get()->PlayerArray.Num();
-	if (NumberOfPlayers == 2)
-	{
-		UWorld* World = GetWorld();
 
-		if (World)
+	UGameInstance* GameInstance = GetGameInstance();
+	if (GameInstance)
+	{
+		UMultiplayerSessionsSubsystem* Subsystem = GameInstance->GetSubsystem<UMultiplayerSessionsSubsystem>();
+		check(Subsystem);
+
+		if (NumberOfPlayers == Subsystem->DesiredNumberOfPlayer)
 		{
-			bUseSeamlessTravel = true;
-			World->ServerTravel(FString("/Game/Maps/BlasterMap?listen"));
+			UWorld* World = GetWorld();
+
+			if (World)
+			{
+				bUseSeamlessTravel = true;
+
+				FString MatchType = Subsystem->DesiredMatchType;
+
+				if (MatchType == "FFA")
+				{
+					World->ServerTravel(FString("/Game/Maps/FFA_Map?listen"));
+				}
+				else if (MatchType == "TDM")
+				{
+					World->ServerTravel(FString("/Game/Maps/TDM_Map?listen"));
+				}
+				else if (MatchType == "CTF")
+				{
+					World->ServerTravel(FString("/Game/Maps/CTF_Map?listen"));
+				}
+			}
 		}
 	}
+
 }
