@@ -5,7 +5,7 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
 
-UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem():
+UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem() :
 	CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)),
 	FindSessionsCompleteDelegate(FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete)),
 	JoinSessionCompleteDelegate(FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete)),
@@ -21,7 +21,7 @@ UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem():
 
 void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FString MatchType)
 {
-	DesiredNumberOfPlayer = NumPublicConnections;
+	DesiredNumPublicConnections = NumPublicConnections;
 	DesiredMatchType = MatchType;
 	if (!SessionInterface.IsValid())
 	{
@@ -29,7 +29,6 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	}
 
 	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
-
 	if (ExistingSession != nullptr)
 	{
 		bCreateSessionOnDestroy = true;
@@ -80,11 +79,10 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!SessionInterface->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), LastSessionSearch.ToSharedRef()))
 	{
-		SessionInterface->ClearOnEndSessionCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 
 		MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
 	}
-
 }
 
 void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult& SessionResult)
@@ -119,41 +117,25 @@ void UMultiplayerSessionsSubsystem::DestroySession()
 	if (!SessionInterface->DestroySession(NAME_GameSession))
 	{
 		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
-
 		MultiplayerOnDestroySessionComplete.Broadcast(false);
 	}
-
 }
 
 void UMultiplayerSessionsSubsystem::StartSession()
 {
-	if (!SessionInterface.IsValid())
-	{
-		MultiplayerOnStartSessionComplete.Broadcast(false);
-		return;
-	}
-
-	StartSessionCompleteDelegateHandle = SessionInterface->AddOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegate);
-
-	if (!SessionInterface->StartSession(NAME_GameSession))
-	{
-		SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
-
-		MultiplayerOnStartSessionComplete.Broadcast(false);
-	}
 }
 
-void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSuccesful)
+void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
 {
 	if (SessionInterface)
 	{
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 	}
 
-	MultiplayerOnCreateSessionComplete.Broadcast(bWasSuccesful);
+	MultiplayerOnCreateSessionComplete.Broadcast(bWasSuccessful);
 }
 
-void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSuccesful)
+void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 {
 	if (SessionInterface)
 	{
@@ -166,12 +148,12 @@ void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSuccesful)
 		return;
 	}
 
-	MultiplayerOnFindSessionsComplete.Broadcast(LastSessionSearch->SearchResults, bWasSuccesful);
+	MultiplayerOnFindSessionsComplete.Broadcast(LastSessionSearch->SearchResults, bWasSuccessful);
 }
 
 void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
 {
-	if (!SessionInterface.IsValid())
+	if (SessionInterface)
 	{
 		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
 	}
@@ -179,26 +161,20 @@ void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOn
 	MultiplayerOnJoinSessionComplete.Broadcast(Result);
 }
 
-void UMultiplayerSessionsSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuccesful)
+void UMultiplayerSessionsSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
 {
 	if (SessionInterface)
 	{
 		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
 	}
-	if (bWasSuccesful && bCreateSessionOnDestroy)
+	if (bWasSuccessful && bCreateSessionOnDestroy)
 	{
 		bCreateSessionOnDestroy = false;
 		CreateSession(LastNumPublicConnections, LastMatchType);
 	}
-	MultiplayerOnDestroySessionComplete.Broadcast(bWasSuccesful);
+	MultiplayerOnDestroySessionComplete.Broadcast(bWasSuccessful);
 }
 
-void UMultiplayerSessionsSubsystem::OnStartSessionComplete(FName SessionName, bool bWasSuccesful)
+void UMultiplayerSessionsSubsystem::OnStartSessionComplete(FName SessionName, bool bWasSuccessful)
 {
-	if (SessionInterface)
-	{
-		SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
-	}
-
-	MultiplayerOnStartSessionComplete.Broadcast(bWasSuccesful);
 }

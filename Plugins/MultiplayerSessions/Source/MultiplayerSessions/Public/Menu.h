@@ -8,7 +8,7 @@
 #include "Menu.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class MULTIPLAYERSESSIONS_API UMenu : public UUserWidget
@@ -16,24 +16,23 @@ class MULTIPLAYERSESSIONS_API UMenu : public UUserWidget
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintCallable)
-	void MenuSetup(int32 NumberOfAllPublicConnections = 4, FString TypeOfMatch = FString(TEXT("FreeForAll")), FString LobbyPath = FString(TEXT("/Game/ThirdPerson/Maps/Lobby")));
+	void MenuSetup(int32 NumberOfPublicConnections = 4, FString TypeOfMatch = FString(TEXT("FreeForAll")), FString LobbyPath = FString(TEXT("/Game/Maps/Lobby")));
 
 protected:
 
 	virtual bool Initialize() override;
 	virtual void NativeDestruct() override;
-
 	//
-	// Callbacks for the custom callbacks on the MultiplayerSessionsSubsystem
+	// Callbacks for the custom delegates on the MultiplayerSessionsSubsystem
 	//
 	UFUNCTION()
-	void OnCreateSession(bool bWasSuccesful);
-	void OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccesful);
+	void OnCreateSession(bool bWasSuccessful);
+	void OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccessful);
 	void OnJoinSession(EOnJoinSessionCompleteResult::Type Result);
 	UFUNCTION()
-	void OnDestroySession(bool bWasSuccesful);
+	void OnDestroySession(bool bWasSuccessful);
 	UFUNCTION()
-	void OnStartSession(bool bWasSuccesful);
+	void OnStartSession(bool bWasSuccessful);
 
 private:
 
@@ -41,7 +40,7 @@ private:
 	class UButton* HostButton;
 
 	UPROPERTY(meta = (BindWidget))
-	class UButton* JoinButton;
+	UButton* JoinButton;
 
 	UFUNCTION()
 	void HostButtonClicked();
@@ -51,13 +50,14 @@ private:
 
 	void MenuTearDown();
 
-	// The subssytem designed to handle all online session functionality
+	// The subsystem designed to handle all online session functionality
 	class UMultiplayerSessionsSubsystem* MultiplayerSessionsSubsystem;
 
 	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	int32 NumPublicConnections{4};
+	int32 NumPublicConnections{ 4 };
+
 	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	FString MatchType{TEXT("FreeForAll")};
+	FString MatchType{ TEXT("FFA") };
 
 	FString PathToLobby{ TEXT("") };
 };

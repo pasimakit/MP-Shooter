@@ -5,25 +5,21 @@
 #include "Components/Button.h"
 #include "MultiplayerSessionsSubsystem.h"
 #include "OnlineSessionSettings.h"
-#include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSubsystem.h"
 
-
-void UMenu::MenuSetup(int32 NumberOfAllPublicConnections, FString TypeOfMatch, FString LobbyPath)
+void UMenu::MenuSetup(int32 NumberOfPublicConnections, FString TypeOfMatch, FString LobbyPath)
 {
 	PathToLobby = FString::Printf(TEXT("%s?listen"), *LobbyPath);
-	NumPublicConnections = NumberOfAllPublicConnections;
+	NumPublicConnections = NumberOfPublicConnections;
 	MatchType = TypeOfMatch;
 	AddToViewport();
 	SetVisibility(ESlateVisibility::Visible);
 	bIsFocusable = true;
 
 	UWorld* World = GetWorld();
-
 	if (World)
 	{
 		APlayerController* PlayerController = World->GetFirstPlayerController();
-
 		if (PlayerController)
 		{
 			FInputModeUIOnly InputModeData;
@@ -61,7 +57,6 @@ bool UMenu::Initialize()
 	{
 		HostButton->OnClicked.AddDynamic(this, &ThisClass::HostButtonClicked);
 	}
-
 	if (JoinButton)
 	{
 		JoinButton->OnClicked.AddDynamic(this, &ThisClass::JoinButtonClicked);
@@ -77,20 +72,10 @@ void UMenu::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void UMenu::OnCreateSession(bool bWasSuccesful)
+void UMenu::OnCreateSession(bool bWasSuccessful)
 {
-	if (bWasSuccesful)
+	if (bWasSuccessful)
 	{
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(
-				-1,
-				15.f,
-				FColor::Yellow,
-				FString(TEXT("Session created succesfully!"))
-			);
-		}
-
 		UWorld* World = GetWorld();
 		if (World)
 		{
@@ -112,7 +97,7 @@ void UMenu::OnCreateSession(bool bWasSuccesful)
 	}
 }
 
-void UMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccesful)
+void UMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccessful)
 {
 	if (MultiplayerSessionsSubsystem == nullptr)
 	{
@@ -123,24 +108,13 @@ void UMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResu
 	{
 		FString SettingsValue;
 		Result.Session.SessionSettings.Get(FName("MatchType"), SettingsValue);
-
 		if (SettingsValue == MatchType)
 		{
-			FString PlayerName = Result.Session.OwningUserName;
-			if (GEngine)
-			{
-				GEngine->AddOnScreenDebugMessage(
-					-1,
-					60.f,
-					FColor::Cyan,
-					FString::Printf(TEXT("Found lobby owner game: %s"), *PlayerName)
-				);
-			}
 			MultiplayerSessionsSubsystem->JoinSession(Result);
 			return;
 		}
 	}
-	if (!bWasSuccesful || SessionResults.Num() == 0)
+	if (!bWasSuccessful || SessionResults.Num() == 0)
 	{
 		JoinButton->SetIsEnabled(true);
 	}
@@ -164,25 +138,14 @@ void UMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 			}
 		}
 	}
-	if (Result != EOnJoinSessionCompleteResult::Success)
-	{
-		JoinButton->SetIsEnabled(true);
-	}
 }
 
-void UMenu::OnDestroySession(bool bWasSuccesful)
+void UMenu::OnDestroySession(bool bWasSuccessful)
 {
 }
 
-void UMenu::OnStartSession(bool bWasSuccesful)
+void UMenu::OnStartSession(bool bWasSuccessful)
 {
-	if (MultiplayerSessionsSubsystem)
-	{
-		if (bWasSuccesful)
-		{
-			MultiplayerSessionsSubsystem->StartSession();
-		}
-	}
 }
 
 void UMenu::HostButtonClicked()

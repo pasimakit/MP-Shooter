@@ -56,7 +56,7 @@ void ABlasterHUD::AddElimAnnouncement(FString Attacker, FString Victim)
 						FVector2D Position = CanvasSlot->GetPosition();
 						FVector2d NewPosition(
 							CanvasSlot->GetPosition().X,
-							Position.Y - CanvasSlot->GetSize().Y);
+							Position.Y + CanvasSlot->GetSize().Y);
 						CanvasSlot->SetPosition(NewPosition);
 					}
 				}

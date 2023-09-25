@@ -110,7 +110,6 @@ void ABlasterPlayerController::ShowReturnToMainMenu()
 			ReturnToMainMenu->MenuTeardown();
 		}
 	}
-
 }
 
 void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighPing)
@@ -226,6 +225,7 @@ void ABlasterPlayerController::OnPossess(APawn* InPawn)
 	if (BlasterCharacter)
 	{
 		SetHUDHealth(BlasterCharacter->GetHealth(), BlasterCharacter->GetMaxHealth());
+		SetHUDShield(BlasterCharacter->GetShield(), BlasterCharacter->GetMaxShield());
 	}
 }
 
@@ -691,7 +691,6 @@ void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerStat
 {
 	ClientElimAnnouncement(Attacker, Victim);
 }
-
 
 void ABlasterPlayerController::ClientElimAnnouncement_Implementation(APlayerState* Attacker, APlayerState* Victim)
 {

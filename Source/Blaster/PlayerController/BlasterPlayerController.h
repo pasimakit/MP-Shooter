@@ -44,7 +44,6 @@ public:
 	FHighPingDelegate HighPingDelegate;
 
 	void BroadcastElim(class APlayerState* Attacker, APlayerState* Victim);
-
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -98,7 +97,6 @@ protected:
 	FString GetInfoText(const TArray<class ABlasterPlayerState*>& Players);
 	FString GetTeamsInfoText(class ABlasterGameState* BlasterGameState);
 private:
-
 	UPROPERTY()
 	class ABlasterHUD* BlasterHUD;
 

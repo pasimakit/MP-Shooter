@@ -360,7 +360,7 @@ public:
 	FORCEINLINE float GetMaxShield() const { return MaxShield; }
 	bool IsLocallyReloading();
 	FORCEINLINE ULagCompensationComponent* GetLagCompensation() const { return LagCompensation; }
-	FORCEINLINE bool IsHoldingTheFlag() const;
+	bool IsHoldingTheFlag() const;
 	ETeam GetTeam();
 	void SetHoldingTheFlag(bool bHolding);
 };

@@ -17,7 +17,7 @@ void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 		UMultiplayerSessionsSubsystem* Subsystem = GameInstance->GetSubsystem<UMultiplayerSessionsSubsystem>();
 		check(Subsystem);
 
-		if (NumberOfPlayers == Subsystem->DesiredNumberOfPlayer)
+		if (NumberOfPlayers == Subsystem->DesiredNumPublicConnections)
 		{
 			UWorld* World = GetWorld();
 
@@ -42,5 +42,4 @@ void ALobbyGameMode::PostLogin(APlayerController* NewPlayer)
 			}
 		}
 	}
-
 }
