@@ -21,13 +21,14 @@ public:
 	virtual void OnRep_Defeats();
 	void AddToScore(float ScoreAmount);
 	void AddToDefeats(int32 DefeatsAmount);
+
+	UPROPERTY(ReplicatedUsing = OnRep_Defeats)
+	int32 Defeats;
 private:
 	UPROPERTY()
 	class ABlasterCharacter* Character;
 	UPROPERTY()
-	class ABlasterPlayerController* Controller;
-	UPROPERTY(ReplicatedUsing = OnRep_Defeats)
-	int32 Defeats;
+	class ABlasterPlayerController* LocalController;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Team)
 	ETeam Team = ETeam::ET_NoTeam;

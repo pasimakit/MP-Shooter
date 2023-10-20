@@ -16,6 +16,26 @@ void ABlasterGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ABlasterGameState, BlueTeamScore);
 }
 
+void ABlasterGameState::AddPlayerState(APlayerState* PlayerState)
+{
+	Super::AddPlayerState(PlayerState);
+	BlasterPlayerArray.Add(Cast<ABlasterPlayerState>(PlayerState));
+}
+
+void ABlasterGameState::RemovePlayerState(APlayerState* PlayerState)
+{
+	Super::AddPlayerState(PlayerState);
+	ABlasterPlayerState* BPlayerState = Cast<ABlasterPlayerState>(PlayerState);
+	BlasterPlayerArray.Remove(BPlayerState);
+
+	ABlasterPlayerController* BPlayer = Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController());
+
+	if (BPlayer)
+	{
+		BPlayer->RemovePlayerScore(BPlayerState);
+	}
+}
+
 void ABlasterGameState::UpdateTopScore(ABlasterPlayerState* ScoringPlayer)
 {
 	if (TopScoringPlayers.Num() == 0)

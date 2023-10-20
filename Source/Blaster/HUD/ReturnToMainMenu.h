@@ -6,6 +6,12 @@
 #include "Blueprint/UserWidget.h"
 #include "ReturnToMainMenu.generated.h"
 
+class USlider;
+class UTextBlock;
+class UButton;
+class APlayerController;
+class UMultiplayerSessionsSubsystem;
+class UBlasterGameInstance;
 /**
  * 
  */
@@ -14,9 +20,18 @@ class BLASTER_API UReturnToMainMenu : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+	UFUNCTION(BlueprintCallable)
 	void MenuSetup();
 	UFUNCTION(BlueprintCallable)
 	void MenuTeardown();
+	UFUNCTION()
+	void SensitivitySliderValueChanged(float Value);
+
+	UPROPERTY(meta = (BindWidget))
+	USlider* SensitivitySlider;
+
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* SensitivityText;
 protected:
 	virtual bool Initialize() override;
 	UFUNCTION()
@@ -25,14 +40,17 @@ protected:
 	void OnPlayerLeftGame();
 private:
 	UPROPERTY(meta = (BindWidget))
-	class UButton* ReturnButton;
+	UButton* ReturnButton;
 
 	UFUNCTION()
 	void ReturnButtonClicked();
 
 	UPROPERTY()
-	class UMultiplayerSessionsSubsystem* MultiplayerSessionsSubsystem;
+	UMultiplayerSessionsSubsystem* MultiplayerSessionsSubsystem;
 
 	UPROPERTY()
-	class APlayerController* PlayerController;
+	APlayerController* PlayerController;
+
+	UPROPERTY()
+	UBlasterGameInstance* BlasterGameInstance;
 };

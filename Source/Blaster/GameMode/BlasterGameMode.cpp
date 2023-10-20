@@ -159,6 +159,7 @@ void ABlasterGameMode::PlayerLeftGame(ABlasterPlayerState* PlayerLeaving)
 	{
 		BlasterGameState->TopScoringPlayers.Remove(PlayerLeaving);
 	}
+
 	ABlasterCharacter* CharacterLeaving = Cast<ABlasterCharacter>(PlayerLeaving->GetPawn());
 	if (CharacterLeaving)
 	{

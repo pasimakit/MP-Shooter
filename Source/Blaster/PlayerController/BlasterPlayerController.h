@@ -6,6 +6,15 @@
 #include "GameFramework/PlayerController.h"
 #include "BlasterPlayerController.generated.h"
 
+class APlayerState;
+class ABlasterPlayerState;
+class ABlasterGameState;
+class ABlasterGameMode;
+class UUserWidget;
+class ABlasterHUD;
+class UCharacterOverlay;
+class UReturnToMainMenu;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHighPingDelegate, bool, bPingTooHigh);
 
 /**
@@ -18,8 +27,6 @@ class BLASTER_API ABlasterPlayerController : public APlayerController
 public:
 	void SetHUDHealth(float Health, float MaxHealth);
 	void SetHUDShield(float Shield, float MaxShield);
-	void SetHUDScore(float Score);
-	void SetHUDDefeats(int32 Defeats);
 	void SetHUDWeaponAmmo(int32 Ammo);
 	void SetHUDCarriedAmmo(int32 Ammo);
 	void SetHUDMatchCountdown(float CountdownTime);
@@ -29,6 +36,9 @@ public:
 	void InitTeamScores();
 	void SetHUDRedTeamScore(int32 RedScore);
 	void SetHUDBlueTeamScore(int32 BlueScore);
+	void RefreshScoreboard();
+	void RefreshPlayerScore(ABlasterPlayerState* BPlayer);
+	void RemovePlayerScore(ABlasterPlayerState* BPlayer);
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -43,7 +53,7 @@ public:
 	float SingleTripTime = 0;
 	FHighPingDelegate HighPingDelegate;
 
-	void BroadcastElim(class APlayerState* Attacker, APlayerState* Victim);
+	void BroadcastElim(APlayerState* Attacker, APlayerState* Victim);
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -84,6 +94,7 @@ protected:
 	void CheckPing(float DeltaTime);
 
 	void ShowReturnToMainMenu();
+	void ShowScoreboard(bool bShow);
 
 	UFUNCTION(Client, Reliable)
 	void ClientElimAnnouncement(APlayerState* Attacker, APlayerState* Victim);
@@ -94,26 +105,33 @@ protected:
 	UFUNCTION()
 	void OnRep_ShowTeamScores();
 
-	FString GetInfoText(const TArray<class ABlasterPlayerState*>& Players);
-	FString GetTeamsInfoText(class ABlasterGameState* BlasterGameState);
+	FString GetInfoText(const TArray<ABlasterPlayerState*>& Players);
+	FString GetTeamsInfoText(ABlasterGameState* BlasterGameState);
 private:
 	UPROPERTY()
-	class ABlasterHUD* BlasterHUD;
+	ABlasterHUD* BlasterHUD;
 
 	/*
 	* Return to main menu
 	*/
 
 	UPROPERTY(EditAnywhere, Category = Menu)
-	TSubclassOf<class UUserWidget> ReturnToMainMenuWidget;
+	TSubclassOf<UUserWidget> ReturnToMainMenuWidget;
 
 	UPROPERTY()
-	class UReturnToMainMenu* ReturnToMainMenu;
+	UReturnToMainMenu* ReturnToMainMenu;
+
+	/**
+	* Scoreboard
+	*/
+
+	void ScoreboardButton_Pressed();
+	void ScoreboardButton_Released();
 
 	bool bReturnToMainMenuOpen = false;
 
 	UPROPERTY()
-	class ABlasterGameMode* BlasterGameMode;
+	ABlasterGameMode* BlasterGameMode;
 	
 	float LevelStartingTime = 0.f;
 	float MatchTime = 0.f;
@@ -128,7 +146,7 @@ private:
 	void OnRep_MatchState();
 	
 	UPROPERTY()
-	class UCharacterOverlay* CharacterOverlay;
+	UCharacterOverlay* CharacterOverlay;
 
 	float HUDHealth;
 	bool bInitializeHealth = false;
@@ -136,9 +154,7 @@ private:
 	float HUDShield;
 	bool bInitializeShield = false;
 	float HUDMaxShield;
-	float HUDScore;
 	bool bInitializeScore = false;
-	int32 HUDDefeats;
 	bool bInitializeDefeats = false;
 	int32 HUDGrenades;
 	bool bInitializeGrenades = false;

@@ -27,9 +27,6 @@ public:
 	UTextBlock* ShieldText;
 
 	UPROPERTY(meta = (BindWidget))
-	UTextBlock* ScoreAmount;
-
-	UPROPERTY(meta = (BindWidget))
 	UTextBlock* RedTeamScore;
 
 	UPROPERTY(meta = (BindWidget))
@@ -37,9 +34,6 @@ public:
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* ScoreSpacerText;
-
-	UPROPERTY(meta = (BindWidget))
-	UTextBlock* DefeatsAmount;
 
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* WeaponAmmoAmount;
@@ -58,4 +52,10 @@ public:
 
 	UPROPERTY(meta = (BindWidgetAnim), Transient)
 	UWidgetAnimation* HighPingAnimation;
+
+	UPROPERTY(meta = (BindWidget))
+	class UVerticalBox* ElimAnnouncementBox;
+
+	UPROPERTY(meta = (BindWidget))
+	class UScoreboardWidget* ScoreboardWidget;
 };

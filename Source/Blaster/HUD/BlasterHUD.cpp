@@ -8,7 +8,7 @@
 #include "ElimAnnouncement.h"
 #include "Components/HorizontalBox.h"
 #include "Components/CanvasPanelSlot.h"
-#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/VerticalBox.h"
 
 void ABlasterHUD::BeginPlay()
 {
@@ -41,28 +41,10 @@ void ABlasterHUD::AddElimAnnouncement(FString Attacker, FString Victim)
 	if (OwningPlayer && ElimAnnouncementClass)
 	{
 		UElimAnnouncement* ElimAnnouncementWidget = CreateWidget<UElimAnnouncement>(OwningPlayer, ElimAnnouncementClass);
-		if (ElimAnnouncementWidget)
+		if (ElimAnnouncementWidget && CharacterOverlay && CharacterOverlay->ElimAnnouncementBox)
 		{
 			ElimAnnouncementWidget->SetElimAnnouncementText(Attacker, Victim);
-			ElimAnnouncementWidget->AddToViewport();
-
-			for (UElimAnnouncement* Msg : ElimMessages)
-			{
-				if (Msg && Msg->AnnouncementBox)
-				{
-					UCanvasPanelSlot* CanvasSlot = UWidgetLayoutLibrary::SlotAsCanvasSlot(Msg->AnnouncementBox);
-					if (CanvasSlot)
-					{
-						FVector2D Position = CanvasSlot->GetPosition();
-						FVector2d NewPosition(
-							CanvasSlot->GetPosition().X,
-							Position.Y + CanvasSlot->GetSize().Y);
-						CanvasSlot->SetPosition(NewPosition);
-					}
-				}
-			}
-
-			ElimMessages.Add(ElimAnnouncementWidget);
+			CharacterOverlay->ElimAnnouncementBox->AddChildToVerticalBox(ElimAnnouncementWidget);
 
 			FTimerHandle ElimMsgTimer;
 			FTimerDelegate ElimMsgDelegate;

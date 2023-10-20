@@ -1,9 +1,12 @@
 #include "ReturnToMainMenu.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/Button.h"
+#include "Components/Slider.h"
+#include "Components/TextBlock.h"
 #include "MultiplayerSessionsSubsystem.h"
 #include "GameFramework/GameModeBase.h"
 #include "Blaster/Character/BlasterCharacter.h"
+#include "Blaster/Framework/BlasterGameInstance.h"
 
 void UReturnToMainMenu::MenuSetup()
 {
@@ -27,13 +30,22 @@ void UReturnToMainMenu::MenuSetup()
 	{
 		ReturnButton->OnClicked.AddDynamic(this, &UReturnToMainMenu::ReturnButtonClicked);
 	}
-	UGameInstance* GameInstance = GetGameInstance();
-	if (GameInstance)
+	if (SensitivitySlider && !SensitivitySlider->OnValueChanged.IsBound())
 	{
-		MultiplayerSessionsSubsystem = GameInstance->GetSubsystem<UMultiplayerSessionsSubsystem>();
+		SensitivitySlider->OnValueChanged.AddDynamic(this, &UReturnToMainMenu::SensitivitySliderValueChanged);
+	}
+	BlasterGameInstance = BlasterGameInstance == nullptr ? Cast<UBlasterGameInstance>(GetGameInstance()) : BlasterGameInstance;
+	if (BlasterGameInstance)
+	{
+		MultiplayerSessionsSubsystem = BlasterGameInstance->GetSubsystem<UMultiplayerSessionsSubsystem>();
 		if (MultiplayerSessionsSubsystem)
 		{
 			MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.AddDynamic(this, &UReturnToMainMenu::OnDestroySession);
+		}
+
+		if (SensitivityText)
+		{
+			SensitivityText->SetText(FText::FromString(FString::SanitizeFloat(BlasterGameInstance->Sensitivity, 1)));
 		}
 	}
 }
@@ -86,17 +98,45 @@ void UReturnToMainMenu::MenuTeardown()
 			FInputModeGameOnly InputModeData;
 			PlayerController->SetInputMode(InputModeData);
 			PlayerController->SetShowMouseCursor(false);
+			ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(PlayerController->GetPawn());
+			if (BlasterCharacter)
+			{
+				BlasterCharacter->UpdateSensitivity();
+			}
 		}
 	}
 	if (ReturnButton && ReturnButton->OnClicked.IsBound())
 	{
 		ReturnButton->OnClicked.RemoveDynamic(this, &UReturnToMainMenu::ReturnButtonClicked);
 	}
+	if (SensitivitySlider && SensitivitySlider->OnValueChanged.IsBound())
+	{
+		SensitivitySlider->OnValueChanged.RemoveDynamic(this, &UReturnToMainMenu::SensitivitySliderValueChanged);
+	}
 	if (MultiplayerSessionsSubsystem && MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.IsBound())
 	{
 		MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.RemoveDynamic(this, &UReturnToMainMenu::OnDestroySession);
 	}
 
+	BlasterGameInstance = BlasterGameInstance == nullptr ? Cast<UBlasterGameInstance>(GetGameInstance()) : BlasterGameInstance;
+
+	if (BlasterGameInstance)
+	{
+		BlasterGameInstance->SaveGame();
+	}
+}
+
+void UReturnToMainMenu::SensitivitySliderValueChanged(float Value)
+{
+	if (BlasterGameInstance)
+	{
+		BlasterGameInstance->Sensitivity = Value;
+		if (SensitivityText)
+		{
+			FString fValue = FString::Printf(TEXT("%.2f"), Value);
+			SensitivityText->SetText(FText::FromString(fValue));
+		}
+	}
 }
 
 void UReturnToMainMenu::ReturnButtonClicked()

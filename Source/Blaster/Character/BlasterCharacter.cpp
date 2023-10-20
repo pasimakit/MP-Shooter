@@ -28,6 +28,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Blaster/GameState/BlasterGameState.h"
 #include "Blaster/PlayerStart/TeamPlayerStart.h"
+#include "Blaster/Framework/BlasterGameInstance.h"
 
 // Sets default values
 ABlasterCharacter::ABlasterCharacter()
@@ -210,6 +211,8 @@ void ABlasterCharacter::BeginPlay()
 	{
 		AttachedGrenade->SetVisibility(false);
 	}
+
+	UpdateSensitivity();
 }
 
 void ABlasterCharacter::Tick(float DeltaTime)
@@ -697,12 +700,12 @@ void ABlasterCharacter::MoveRight(float Value)
 
 void ABlasterCharacter::Turn(float Value)
 {
-	AddControllerYawInput(Value);
+	AddControllerYawInput(Value * Sensitivity);
 }
 
 void ABlasterCharacter::LookUp(float Value)
 {
-	AddControllerPitchInput(Value);
+	AddControllerPitchInput(Value * Sensitivity);
 }
 
 void ABlasterCharacter::EquipButtonPressed()
@@ -1008,6 +1011,15 @@ void ABlasterCharacter::UpdateHUDAmmo()
 	{
 		BlasterPlayerController->SetHUDCarriedAmmo(Combat->CarriedAmmo);
 		BlasterPlayerController->SetHUDWeaponAmmo(Combat->EquippedWeapon->GetAmmo());
+	}
+}
+
+void ABlasterCharacter::UpdateSensitivity()
+{
+	BlasterGameInstance = BlasterGameInstance == nullptr ? Cast<UBlasterGameInstance>(GetGameInstance()) : BlasterGameInstance;
+	if (BlasterGameInstance)
+	{
+		Sensitivity = BlasterGameInstance->Sensitivity;
 	}
 }
 

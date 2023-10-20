@@ -17,14 +17,12 @@ void ABlasterPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 void ABlasterPlayerState::AddToScore(float ScoreAmount)
 {
 	SetScore(GetScore() + ScoreAmount);
-	Character = Character == nullptr ? Cast<ABlasterCharacter>(GetPawn()) : Character;
-	if (Character)
+
+	LocalController = LocalController == nullptr ? Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController()) : LocalController;
+
+	if (LocalController)
 	{
-		Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->Controller) : Controller;
-		if (Controller)
-		{
-			Controller->SetHUDScore(GetScore());
-		}
+		LocalController->RefreshPlayerScore(this);
 	}
 }
 
@@ -32,41 +30,33 @@ void ABlasterPlayerState::OnRep_Score()
 {
 	Super::OnRep_Score();
 
-	Character = Character == nullptr ? Cast<ABlasterCharacter>(GetPawn()) : Character;
-	if (Character)
+	LocalController = LocalController == nullptr ? Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController()) : LocalController;
+
+	if (LocalController)
 	{
-		Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->Controller) : Controller;
-		if (Controller)
-		{
-			Controller->SetHUDScore(GetScore());
-		}
+		LocalController->RefreshPlayerScore(this);
 	}
 }
 
 void ABlasterPlayerState::AddToDefeats(int32 DefeatsAmount)
 {
 	Defeats += DefeatsAmount;
-	Character = Character == nullptr ? Cast<ABlasterCharacter>(GetPawn()) : Character;
-	if (Character)
+
+	LocalController = LocalController == nullptr ? Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController()) : LocalController;
+
+	if (LocalController)
 	{
-		Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->Controller) : Controller;
-		if (Controller)
-		{
-			Controller->SetHUDDefeats(Defeats);
-		}
+		LocalController->RefreshPlayerScore(this);
 	}
 }
 
 void ABlasterPlayerState::OnRep_Defeats()
 {
-	Character = Character == nullptr ? Cast<ABlasterCharacter>(GetPawn()) : Character;
-	if (Character)
+	LocalController = LocalController == nullptr ? Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController()) : LocalController;
+
+	if (LocalController)
 	{
-		Controller = Controller == nullptr ? Cast<ABlasterPlayerController>(Character->Controller) : Controller;
-		if (Controller)
-		{
-			Controller->SetHUDDefeats(Defeats);
-		}
+		LocalController->RefreshPlayerScore(this);
 	}
 }
 
@@ -79,6 +69,13 @@ void ABlasterPlayerState::SetTeam(ETeam TeamToSet)
 	{
 		BCharacter->SetTeamColor(Team);
 	}
+
+	LocalController = LocalController == nullptr ? Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController()) : LocalController;
+
+	if (LocalController)
+	{
+		LocalController->RefreshPlayerScore(this);
+	}
 }
 
 void ABlasterPlayerState::OnRep_Team()
@@ -87,6 +84,13 @@ void ABlasterPlayerState::OnRep_Team()
 	if (BCharacter)
 	{
 		BCharacter->SetTeamColor(Team);
+	}
+
+	LocalController = LocalController == nullptr ? Cast<ABlasterPlayerController>(GetWorld()->GetFirstPlayerController()) : LocalController;
+
+	if (LocalController)
+	{
+		LocalController->RefreshPlayerScore(this);
 	}
 }
 

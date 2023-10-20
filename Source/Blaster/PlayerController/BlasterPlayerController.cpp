@@ -18,6 +18,8 @@
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Components/Image.h"
 #include "Blaster/BlasterTypes/Announcement.h"
+#include "Blaster/HUD/Scoreboard/ScoreboardWidget.h"
+#include "Blaster/Framework/BlasterGameInstance.h"
 
 void ABlasterPlayerController::BeginPlay()
 {
@@ -25,6 +27,11 @@ void ABlasterPlayerController::BeginPlay()
 
 	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
 	ServerCheckMatchState();
+	UBlasterGameInstance* BlasterGameInstance = Cast<UBlasterGameInstance>(GetGameInstance());
+	if (BlasterGameInstance)
+	{
+		BlasterGameInstance->LoadGame();
+	}
 }
 
 void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -42,6 +49,8 @@ void ABlasterPlayerController::SetupInputComponent()
 	if (InputComponent == nullptr) return;
 
 	InputComponent->BindAction("Quit", IE_Pressed, this, &ABlasterPlayerController::ShowReturnToMainMenu);
+	InputComponent->BindAction("Scoreboard", IE_Pressed, this, &ABlasterPlayerController::ScoreboardButton_Pressed);
+	InputComponent->BindAction("Scoreboard", IE_Released, this, &ABlasterPlayerController::ScoreboardButton_Released);
 }
 
 void ABlasterPlayerController::Tick(float DeltaTime)
@@ -112,6 +121,47 @@ void ABlasterPlayerController::ShowReturnToMainMenu()
 	}
 }
 
+void ABlasterPlayerController::ShowScoreboard(bool bShow)
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	if (BlasterHUD && BlasterHUD->CharacterOverlay)
+	{
+		RefreshScoreboard();
+		BlasterHUD->CharacterOverlay->ScoreboardWidget->ShowScoreboard(bShow);
+	}
+}
+
+void ABlasterPlayerController::RefreshScoreboard()
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	if (BlasterHUD && BlasterHUD->CharacterOverlay)
+	{
+		ABlasterGameState* BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
+		if(BlasterGameState && BlasterGameState->BlasterPlayerArray.Num() > 0)
+		{
+			BlasterHUD->CharacterOverlay->ScoreboardWidget->RefreshScoreboard(BlasterGameState->BlasterPlayerArray);
+		}
+	}
+}
+
+void ABlasterPlayerController::RefreshPlayerScore(ABlasterPlayerState* BPlayer)
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	if (BlasterHUD && BlasterHUD->CharacterOverlay)
+	{
+		BlasterHUD->CharacterOverlay->ScoreboardWidget->RefreshPlayer(BPlayer);
+	}
+}
+
+void ABlasterPlayerController::RemovePlayerScore(ABlasterPlayerState* BPlayer)
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	if (BlasterHUD && BlasterHUD->CharacterOverlay)
+	{
+		BlasterHUD->CharacterOverlay->ScoreboardWidget->RemovePlayer(BPlayer);
+	}
+}
+
 void ABlasterPlayerController::ServerReportPingStatus_Implementation(bool bHighPing)
 {
 	HighPingDelegate.Broadcast(bHighPing);
@@ -128,8 +178,6 @@ void ABlasterPlayerController::PollInit()
 			{
 				if (bInitializeHealth) SetHUDHealth(HUDHealth, HUDMaxHealth);
 				if (bInitializeShield) SetHUDShield(HUDShield, HUDMaxShield);
-				if (bInitializeScore) SetHUDScore(HUDScore);
-				if (bInitializeDefeats) SetHUDDefeats(HUDDefeats);
 				if (bInitializeCarriedAmmo) SetHUDCarriedAmmo(HUDCarriedAmmo);
 				if (bInitializeWeaponAmmo) SetHUDWeaponAmmo(HUDWeaponAmmo);
 				ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetPawn());
@@ -272,42 +320,6 @@ void ABlasterPlayerController::SetHUDShield(float Shield, float MaxShield)
 		bInitializeShield = true;
 		HUDShield = Shield;
 		HUDMaxShield = MaxShield;
-	}
-}
-
-void ABlasterPlayerController::SetHUDScore(float Score)
-{
-	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
-	bool bHudValid = BlasterHUD &&
-		BlasterHUD->CharacterOverlay &&
-		BlasterHUD->CharacterOverlay->ScoreAmount;
-	if (bHudValid)
-	{
-		FString ScoreText = FString::Printf(TEXT("%d"), FMath::FloorToInt(Score));
-		BlasterHUD->CharacterOverlay->ScoreAmount->SetText(FText::FromString(ScoreText));
-	}
-	else
-	{
-		bInitializeScore = true;
-		HUDScore = Score;
-	}
-}
-
-void ABlasterPlayerController::SetHUDDefeats(int32 Defeats)
-{
-	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
-	bool bHudValid = BlasterHUD &&
-		BlasterHUD->CharacterOverlay &&
-		BlasterHUD->CharacterOverlay->DefeatsAmount;
-	if (bHudValid)
-	{
-		FString DefeatsText = FString::Printf(TEXT("%d"), Defeats);
-		BlasterHUD->CharacterOverlay->DefeatsAmount->SetText(FText::FromString(DefeatsText));
-	}
-	else
-	{
-		bInitializeDefeats = true;
-		HUDDefeats = Defeats;
 	}
 }
 
@@ -547,6 +559,16 @@ void ABlasterPlayerController::OnMatchStateSet(FName State, bool bTeamsMatch)
 	{
 		HandleCooldown();
 	}
+}
+
+void ABlasterPlayerController::ScoreboardButton_Pressed()
+{
+	ShowScoreboard(true);
+}
+
+void ABlasterPlayerController::ScoreboardButton_Released()
+{
+	ShowScoreboard(false);
 }
 
 void ABlasterPlayerController::OnRep_MatchState()

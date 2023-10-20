@@ -50,7 +50,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
 private:
-
 	UPROPERTY()
 	class APlayerController* OwningPlayer;
 

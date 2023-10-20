@@ -11,6 +11,8 @@
 #include "Blaster/BlasterTypes/Team.h"
 #include "BlasterCharacter.generated.h"
 
+class UBlasterGameInstance;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
 
 UCLASS()
@@ -39,6 +41,7 @@ public:
 	void UpdateHUDHealth();
 	void UpdateHUDShield();
 	void UpdateHUDAmmo();
+	void UpdateSensitivity();
 	void SpawnDefaultWeapon();
 	
 	UPROPERTY(Replicated)
@@ -64,6 +67,9 @@ public:
 	void MulticastLostTheLead();
 
 	void SetTeamColor(ETeam Team);
+
+	UPROPERTY()
+	float Sensitivity = 1.f;
 protected:
 	virtual void BeginPlay() override;
 
@@ -248,6 +254,9 @@ private:
 
 	UPROPERTY()
 	class ABlasterPlayerController* BlasterPlayerController;
+
+	UPROPERTY()
+	UBlasterGameInstance* BlasterGameInstance;
 
 	bool bElimmed = false;
 

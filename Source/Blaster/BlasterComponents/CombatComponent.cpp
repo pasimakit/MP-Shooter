@@ -827,7 +827,6 @@ void UCombatComponent::OnRep_Aiming()
 	{
 		bAiming = bAimButtonPressed;
 	}
-
 }
 
 void UCombatComponent::ServerSetAiming_Implementation(bool bIsAiming)
