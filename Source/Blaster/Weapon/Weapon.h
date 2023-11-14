@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "WeaponTypes.h"
 #include "Blaster/BlasterTypes/Team.h"
+#include "Components/TimelineComponent.h"
 #include "Weapon.generated.h"
 
 UENUM(BlueprintType)
@@ -33,8 +34,8 @@ UCLASS()
 class BLASTER_API AWeapon : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	AWeapon();
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -45,9 +46,12 @@ public:
 	void SetHUDAmmo();
 	void AddAmmo(int32 AmmoToAdd);
 	FVector TraceEndWithScatter(const FVector& HitTarget);
-/**
-* Textures for the crosshairs
-*/
+
+	FTimeline RecoilTimeline;
+
+	/**
+	* Textures for the crosshairs
+	*/
 	UPROPERTY(EditAnywhere, Category = "Crosshairs")
 	class UTexture2D* CrosshairsCenter;
 
@@ -85,6 +89,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	class USoundCue* EquipSound;
+
+	UPROPERTY(EditAnywhere, Category = Recoil)
+	TSubclassOf<class UCameraShakeBase> RecoilCameraShake;
 
 	/*
 	* Enable custom depth
@@ -147,11 +154,42 @@ protected:
 
 	UPROPERTY()
 	class ABlasterCharacter* BlasterOwnerCharacter;
+
 	UPROPERTY()
 	class ABlasterPlayerController* BlasterOwnerController;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Recoil")
+	class UCurveFloat* VerticalCurve;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Recoil")
+	UCurveFloat* HorizontalCurve;
+
+	UPROPERTY()
+	FRotator StartRotation;
+
+	UPROPERTY()
+	FTimerHandle RecoilTimerHandle;
+
+	UPROPERTY()
+	FTimerHandle ResetRecoilTimerHandle;
+
+	UPROPERTY(EditAnywhere, Category = "Recoil")
+	float RecoilPullTime = 0.1f;
+
+	UPROPERTY(EditAnywhere, Category = "Recoil")
+	float ResetRecoilTime = 2.f;
+
+	UPROPERTY()
+	bool IsRecoilPulling = false;
+
+	UFUNCTION()
+	void ReverseRecoil();
+
+	UFUNCTION()
+	void ResetRecoilPattern();
+
 	UFUNCTION()
 	void OnPingTooHigh(bool bPingTooHigh);
-
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	USkeletalMeshComponent* WeaponMesh;
@@ -167,7 +205,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	class UWidgetComponent* PickupWidget;
-	
+
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	class UAnimationAsset* FireAnimation;
 
@@ -198,7 +236,7 @@ private:
 	UPROPERTY(EditAnywhere)
 	ETeam Team;
 
-public:	
+public:
 	void SetWeaponState(EWeaponState State);
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
 	FORCEINLINE USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }

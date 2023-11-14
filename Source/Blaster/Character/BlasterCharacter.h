@@ -70,6 +70,7 @@ public:
 
 	UPROPERTY()
 	float Sensitivity = 1.f;
+
 protected:
 	virtual void BeginPlay() override;
 

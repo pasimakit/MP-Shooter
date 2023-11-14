@@ -35,6 +35,12 @@ public:
 	UPROPERTY(EditAnywhere)
 	float HeadshotDamage = 40.f;
 
+	UFUNCTION(Server, Reliable)
+	void ServerSpawnBulletHole(const FHitResult& Hit);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastSpawnBulletHole(const FHitResult& Hit);
+
 protected:
 	virtual void BeginPlay() override;
 	void StartDestroyTimer();
@@ -63,8 +69,14 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 	class UProjectileMovementComponent* ProjectileMovementComponent;
 
+	UPROPERTY(EditAnywhere)
+	class UMaterialInstance* ImpactDecal;
+
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent* ProjectileMesh;
+
+	UPROPERTY(EditAnywhere)
+	float DecalLifespan = 15.f;
 
 	UPROPERTY(EditAnywhere)
 	float DamageInnerRadius = 200.f;

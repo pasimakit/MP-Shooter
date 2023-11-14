@@ -16,7 +16,7 @@
 // Sets default values
 AWeapon::AWeapon()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 	SetReplicateMovement(true);
 
@@ -62,12 +62,24 @@ void AWeapon::BeginPlay()
 	{
 		PickupWidget->SetVisibility(false);
 	}
+
+	FOnTimelineFloat XRecoilCurve;
+	FOnTimelineFloat YRecoilCurve;
+
+	if (!HorizontalCurve || !VerticalCurve) return;
+
+	RecoilTimeline.AddInterpFloat(VerticalCurve, YRecoilCurve);
+	RecoilTimeline.AddInterpFloat(HorizontalCurve, XRecoilCurve);
 }
 
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (RecoilTimeline.IsPlaying())
+	{
+		RecoilTimeline.TickTimeline(DeltaTime);
+	}
 }
 
 void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -100,6 +112,34 @@ void AWeapon::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 		if (BlasterCharacter->IsHoldingTheFlag()) return;
 		BlasterCharacter->SetOverlappingWeapon(nullptr);
 	}
+}
+
+void AWeapon::ReverseRecoil()
+{
+	RecoilTimeline.Reverse();
+	IsRecoilPulling = true;
+
+	GetWorldTimerManager().ClearTimer(RecoilTimerHandle);
+	GetWorldTimerManager().ClearTimer(ResetRecoilTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		ResetRecoilTimerHandle,
+		this,
+		&AWeapon::ResetRecoilPattern,
+		ResetRecoilTime
+	);
+
+	UE_LOG(LogTemp, Warning, TEXT("REVERSING RECOIL PATTERN"));
+}
+
+void AWeapon::ResetRecoilPattern()
+{
+	GetWorldTimerManager().ClearTimer(RecoilTimerHandle);
+	GetWorldTimerManager().ClearTimer(ResetRecoilTimerHandle);
+
+	RecoilTimeline.SetPlaybackPosition(0.f, false);
+	RecoilTimeline.Stop();
+	UE_LOG(LogTemp, Warning, TEXT("RESET RECOIL PATTERN"));
 }
 
 void AWeapon::OnPingTooHigh(bool bPingTooHigh)
@@ -321,6 +361,19 @@ void AWeapon::Fire(const FVector& HitTarget)
 			}
 		}
 	}
+	if (BlasterOwnerCharacter)
+	{
+		RecoilTimeline.Play();
+		GetWorldTimerManager().ClearTimer(RecoilTimerHandle);
+		GetWorldTimerManager().ClearTimer(ResetRecoilTimerHandle);
+
+		GetWorldTimerManager().SetTimer(
+			RecoilTimerHandle,
+			this,
+			&AWeapon::ReverseRecoil,
+			RecoilPullTime
+		);
+	}
 	SpendRound();
 }
 
@@ -333,17 +386,19 @@ FVector AWeapon::TraceEndWithScatter(const FVector& HitTarget)
 	const FVector TraceStart = SocketTransform.GetLocation();
 
 	const FVector ToTargetNormalized = (HitTarget - TraceStart).GetSafeNormal();
-	const FVector SphereCenter = TraceStart + ToTargetNormalized * DistanceToSphere;
+	const float Time = RecoilTimeline.GetPlaybackPosition();
+	const FVector RecoilOffset = FVector(0.f, HorizontalCurve->GetFloatValue(Time), VerticalCurve->GetFloatValue(Time));
+	//const FVector SphereCenter = TraceStart + ToTargetNormalized * DistanceToSphere;
+	const FVector RecoilCenter = TraceStart + (ToTargetNormalized + RecoilOffset) * DistanceToSphere;
 	const FVector RandVec = UKismetMathLibrary::RandomUnitVector() * FMath::FRandRange(0.f, SphereRadius);
-	const FVector EndLoc = SphereCenter + RandVec;
+	const FVector EndLoc = RecoilCenter + RandVec;
 	const FVector ToEndLoc = EndLoc - TraceStart;
 
-	/*
-	DrawDebugSphere(GetWorld(), SphereCenter, SphereRadius, 12, FColor::Red, true);
-	DrawDebugSphere(GetWorld(), EndLoc, 4.f, 12, FColor::Orange, true);
-	DrawDebugLine(GetWorld(), TraceStart, FVector(TraceStart + ToEndLoc * TRACE_LENGTH / ToEndLoc.Size()), FColor::Cyan, true);
-	*/
-
+	//DrawDebugSphere(GetWorld(), RecoilCenter, SphereRadius, 12, FColor::Emerald, true);
+	//DrawDebugSphere(GetWorld(), SphereCenter, SphereRadius, 12, FColor::Red, true);
+	//DrawDebugSphere(GetWorld(), EndLoc, 4.f, 12, FColor::Orange, true);
+	//DrawDebugLine(GetWorld(), TraceStart, FVector(TraceStart + ToEndLoc * TRACE_LENGTH / ToEndLoc.Size()), FColor::Cyan, true);
+	
 	return FVector(TraceStart + ToEndLoc * TRACE_LENGTH / ToEndLoc.Size());
 }
 

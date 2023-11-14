@@ -10,6 +10,7 @@
 #include "Sound/SoundCue.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Blaster/BlasterComponents/LagCompensationComponent.h"
+#include "Components/DecalComponent.h"
 
 void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 {
@@ -29,6 +30,7 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 		// Maps hit characters to number of times hit
 		TMap<ABlasterCharacter*, uint32> HitMap;
 		TMap<ABlasterCharacter*, uint32> HeadshotHitMap;
+		TArray<FHitResult> MissedHits;
 		for (FVector_NetQuantize HitTarget : HitTargets)
 		{
 			FHitResult FireHit;
@@ -50,6 +52,13 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 					else HitMap.Emplace(BlasterCharacter, 1);
 				}
 
+			}
+			else
+			{
+				if (FireHit.bBlockingHit)
+				{
+					MissedHits.Add(FireHit);
+				}
 			}
 
 			if (ImpactParticles)
@@ -129,6 +138,8 @@ void AShotgun::FireShotgun(const TArray<FVector_NetQuantize>& HitTargets)
 				);
 			}
 		}
+
+		ServerSpawnBulletHoles(MissedHits);
 	}
 }
 
@@ -141,15 +152,50 @@ void AShotgun::ShotgunTraceEndWithScatter(const FVector& HitTarget, TArray<FVect
 	const FVector TraceStart = SocketTransform.GetLocation();
 
 	const FVector ToTargetNormalized = (HitTarget - TraceStart).GetSafeNormal();
-	const FVector SphereCenter = TraceStart + ToTargetNormalized * DistanceToSphere;
+	const float Time = RecoilTimeline.GetPlaybackPosition();
+	const FVector RecoilOffset = FVector(0.f, HorizontalCurve->GetFloatValue(Time), VerticalCurve->GetFloatValue(Time));
+	//const FVector SphereCenter = TraceStart + ToTargetNormalized * DistanceToSphere;
+	const FVector RecoilCenter = TraceStart + (ToTargetNormalized + RecoilOffset) * DistanceToSphere;
 
 	for (uint32 i = 0; i < NumberOfPellets; i++)
 	{
 		const FVector RandVec = UKismetMathLibrary::RandomUnitVector() * FMath::FRandRange(0.f, SphereRadius);
-		const FVector EndLoc = SphereCenter + RandVec;
+		const FVector EndLoc = RecoilCenter + RandVec;
 		FVector ToEndLoc = EndLoc - TraceStart;
 		ToEndLoc = TraceStart + ToEndLoc * TRACE_LENGTH / ToEndLoc.Size();
 
 		HitTargets.Add(ToEndLoc);
+
+		//DrawDebugSphere(GetWorld(), EndLoc, 4.f, 12, FColor::Orange, true);
+		//DrawDebugLine(GetWorld(), TraceStart, FVector(TraceStart + RecoilCenter * TRACE_LENGTH / ToEndLoc.Size()), FColor::Cyan, true);
+	}
+
+	//DrawDebugSphere(GetWorld(), RecoilCenter, SphereRadius, 12, FColor::Red, true);
+	
+}
+
+void AShotgun::ServerSpawnBulletHoles_Implementation(const TArray<FHitResult>& Hits)
+{
+	MulticastSpawnBulletHoles(Hits);
+}
+
+void AShotgun::MulticastSpawnBulletHoles_Implementation(const TArray<FHitResult>& Hits)
+{
+	if (GetWorld())
+	{
+		for (auto Hit : Hits)
+		{
+			FVector HitLocation = Hit.ImpactPoint;
+			if (Hit.bBlockingHit)
+			{
+				if (ImpactDecal == nullptr) return;
+				FRotator Rotation = Hit.ImpactNormal.Rotation();
+				float RandOffset = FMath::RandRange(-180.f, 180.f);
+				Rotation = FRotator(Rotation.Pitch, Rotation.Yaw, Rotation.Roll + RandOffset);
+
+				UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), ImpactDecal, FVector(12.f, 12.f, 12.f), Hit.ImpactPoint, Rotation, DecalLifespan);
+				Decal->SetFadeScreenSize(0.f);
+			}
+		}
 	}
 }

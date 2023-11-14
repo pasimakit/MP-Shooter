@@ -312,7 +312,7 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly);
 	DOREPLIFETIME(ABlasterCharacter, Health);
 	DOREPLIFETIME(ABlasterCharacter, bDisableGameplay);
-	DOREPLIFETIME(ABlasterCharacter, Shield)
+	DOREPLIFETIME(ABlasterCharacter, Shield);
 }
 
 
@@ -532,6 +532,10 @@ void ABlasterCharacter::PlayFireMontage(bool bAiming)
 		FName SectionName;
 		SectionName = bAiming ? FName("RifleAim") : FName("RifleHip");
 		AnimInstance->Montage_JumpToSection(SectionName);
+		if(IsLocallyControlled())
+		{
+			BlasterPlayerController->ClientStartCameraShake(Combat->EquippedWeapon->RecoilCameraShake, bAiming ? 0.7f : 1.f);
+		}
 	}
 }
 

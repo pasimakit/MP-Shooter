@@ -11,6 +11,7 @@
 #include "Blaster/Blaster.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
+#include "Components/DecalComponent.h"
 
 AProjectile::AProjectile()
 {
@@ -26,6 +27,7 @@ AProjectile::AProjectile()
 	CollisionBox->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Block);
 	CollisionBox->SetCollisionResponseToChannel(ECC_SkeletalMesh, ECollisionResponse::ECR_Block);
 }
+
 
 void AProjectile::BeginPlay()
 {
@@ -55,7 +57,32 @@ void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimi
 	{
 		return;
 	}
+	ServerSpawnBulletHole(Hit);
 	Destroy();
+}
+
+
+void AProjectile::ServerSpawnBulletHole_Implementation(const FHitResult& Hit)
+{
+	MulticastSpawnBulletHole(Hit);
+}
+
+void AProjectile::MulticastSpawnBulletHole_Implementation(const FHitResult& Hit)
+{
+	if (GetWorld())
+	{
+		FVector HitLocation = Hit.ImpactPoint;
+		if (Hit.bBlockingHit)
+		{
+			if (ImpactDecal == nullptr) return;
+			FRotator Rotation = Hit.ImpactNormal.Rotation();
+			float RandOffset = FMath::RandRange(-180.f, 180.f);
+			Rotation = FRotator(Rotation.Pitch, Rotation.Yaw, Rotation.Roll + RandOffset);
+
+			UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), ImpactDecal, FVector(12.f, 12.f, 12.f), Hit.ImpactPoint, Rotation, DecalLifespan);
+			Decal->SetFadeScreenSize(0.f);
+		}
+	}
 }
 
 void AProjectile::ExplodeDamage()

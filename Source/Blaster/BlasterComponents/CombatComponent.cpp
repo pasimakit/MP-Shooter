@@ -180,7 +180,7 @@ bool UCombatComponent::ServerFire_Validate(const FVector_NetQuantize& TraceHitTa
 {
 	if (EquippedWeapon)
 	{
-		bool bNearlyEqual = FMath::IsNearlyEqual(EquippedWeapon->FireDelay, FireDelay, 0.001f);
+		bool bNearlyEqual = FMath::IsNearlyEqual(EquippedWeapon->FireDelay, FireDelay, 0.2f);
 		return bNearlyEqual;
 	}
 	return true;
@@ -201,7 +201,7 @@ bool UCombatComponent::ServerShotgunFire_Validate(const TArray<FVector_NetQuanti
 {
 	if (EquippedWeapon)
 	{
-		bool bNearlyEqual = FMath::IsNearlyEqual(EquippedWeapon->FireDelay, FireDelay, 0.001f);
+		bool bNearlyEqual = FMath::IsNearlyEqual(EquippedWeapon->FireDelay, FireDelay, 0.2f);
 		return bNearlyEqual;
 	}
 	return true;
@@ -741,6 +741,8 @@ void UCombatComponent::SetHUDCrosshairs(float DeltaTime)
 				HUDPackage.CrosshairsRight = EquippedWeapon->CrosshairsRight;
 				HUDPackage.CrosshairsBottom = EquippedWeapon->CrosshairsBottom;
 				HUDPackage.CrosshairsTop = EquippedWeapon->CrosshairsTop;
+				
+				float RecoilTime = EquippedWeapon->RecoilTimeline.GetPlaybackPosition();
 			}
 			else
 			{

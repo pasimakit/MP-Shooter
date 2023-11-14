@@ -10,6 +10,7 @@
 #include "Sound/SoundCue.h"
 #include "WeaponTypes.h"
 #include "Blaster/BlasterComponents/LagCompensationComponent.h"
+#include "Components/DecalComponent.h"
 
 void AHitScanWeapon::Fire(const FVector& HitTarget)
 {
@@ -60,6 +61,13 @@ void AHitScanWeapon::Fire(const FVector& HitTarget)
 				}
 			}
 		}
+		else
+		{
+			if (FireHit.bBlockingHit && HasAuthority())
+			{
+				ServerSpawnBulletHole(FireHit);
+			}
+		}
 		if (ImpactParticles)
 		{
 			UGameplayStatics::SpawnEmitterAtLocation(
@@ -92,6 +100,29 @@ void AHitScanWeapon::Fire(const FVector& HitTarget)
 				FireSound,
 				GetActorLocation()
 			);
+		}
+	}
+}
+
+void AHitScanWeapon::ServerSpawnBulletHole_Implementation(const FHitResult& Hit)
+{
+	MulticastSpawnBulletHole(Hit);
+}
+
+void AHitScanWeapon::MulticastSpawnBulletHole_Implementation(const FHitResult& Hit)
+{
+	if (GetWorld())
+	{
+		FVector HitLocation = Hit.ImpactPoint;
+		if (Hit.bBlockingHit)
+		{
+			if (ImpactDecal == nullptr) return;
+			FRotator Rotation = Hit.ImpactNormal.Rotation();
+			float RandOffset = FMath::RandRange(-180.f, 180.f);
+			Rotation = FRotator(Rotation.Pitch, Rotation.Yaw, Rotation.Roll + RandOffset);
+
+			UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(GetWorld(), ImpactDecal, FVector(12.f, 12.f, 12.f), Hit.ImpactPoint, Rotation, DecalLifespan);
+			Decal->SetFadeScreenSize(0.f);
 		}
 	}
 }
