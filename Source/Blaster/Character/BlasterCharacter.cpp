@@ -44,6 +44,10 @@ ABlasterCharacter::ABlasterCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	ZoomCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ZoomCamera"));
+	ZoomCamera->SetupAttachment(GetMesh());
+	ZoomCamera->bUsePawnControlRotation = true;
+
 	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverheadWidget->SetupAttachment(RootComponent);
 
@@ -1139,4 +1143,20 @@ void ABlasterCharacter::SetHoldingTheFlag(bool bHolding)
 {
 	if (Combat == nullptr) return;
 	Combat->bHoldingTheFlag = bHolding;
+}
+
+
+void ABlasterCharacter::UseZoomCamera(bool bUseZoom)
+{
+	if (ZoomCamera == nullptr || FollowCamera == nullptr) return;
+	if (bUseZoom)
+	{
+		ZoomCamera->Activate();
+		FollowCamera->Deactivate();
+	}
+	else
+	{
+		ZoomCamera->Deactivate();
+		FollowCamera->Activate();
+	}
 }

@@ -17,6 +17,7 @@
 #include "Blaster/Character/BlasterAnimInstance.h"
 #include "Blaster/Weapon/Projectile.h"
 #include "Blaster/Weapon/Shotgun.h"
+#include "Camera/CameraComponent.h"
 
 UCombatComponent::UCombatComponent()
 {
@@ -268,9 +269,16 @@ void UCombatComponent::SwapWeapons()
 {
 	if (CombatState != ECombatState::ECS_Unoccupied || Character == nullptr || !Character->HasAuthority()) return;
 
+	if (EquippedWeapon && Character && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Sniper)
+	{
+		Character->ShowSniperScopeWidget(false);
+		Character->UseZoomCamera(false);
+	}
+
 	Character->PlaySwapMontage();
 	CombatState = ECombatState::ECS_SwappingWeapons;
 	Character->bFinishedSwapping = false;
+
 	if (SecondaryWeapon) SecondaryWeapon->EnableCustomDepth(false);
 }
 
@@ -305,6 +313,11 @@ void UCombatComponent::EquipPrimaryWeapon(AWeapon* WeaponToEquip)
 {
 	if (WeaponToEquip == nullptr) return;
 	DropEquippedWeapon();
+	if (EquippedWeapon && Character && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Sniper)
+	{
+		Character->ShowSniperScopeWidget(false);
+		Character->UseZoomCamera(false);
+	}
 	EquippedWeapon = WeaponToEquip;
 	EquippedWeapon->SetWeaponState(EWeaponState::EWS_Equipped);
 	AttachActorToRightHand(EquippedWeapon);
@@ -329,6 +342,11 @@ void UCombatComponent::DropEquippedWeapon()
 {
 	if (EquippedWeapon)
 	{
+		if (Character && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Sniper)
+		{
+			Character->ShowSniperScopeWidget(false);
+			Character->UseZoomCamera(false);
+		}
 		EquippedWeapon->Dropped();
 	}
 }
@@ -799,9 +817,9 @@ void UCombatComponent::InterpFOV(float DeltaTime)
 	{
 		CurrentFOV = FMath::FInterpTo(CurrentFOV, DefaultFOV, DeltaTime, ZoomInterSpeed);
 	}
-	if (Character && Character->GetFollowCamera())
+	if (Character && Character->GetZoomCamera())
 	{
-		Character->GetFollowCamera()->SetFieldOfView(CurrentFOV);
+		Character->GetZoomCamera()->SetFieldOfView(CurrentFOV);
 	}
 }
 
@@ -816,9 +834,17 @@ void UCombatComponent::SetAiming(bool bIsAiming)
 	{
 		Character->GetCharacterMovement()->MaxWalkSpeed = bIsAiming ? AimWalkSpeed : BaseWalkSpeed;
 	}
-	if (Character->IsLocallyControlled() && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Sniper)
+	if (Character->IsLocallyControlled() && EquippedWeapon->GetWeaponType() == EWeaponType::EWT_Sniper && CombatState != ECombatState::ECS_SwappingWeapons)
 	{
 		Character->ShowSniperScopeWidget(bIsAiming);
+		if (bIsAiming)
+		{
+			Character->UseZoomCamera(true);
+		}
+		else
+		{
+			Character->UseZoomCamera(false);
+		}
 	}
 	bAimButtonPressed = bIsAiming;
 }
