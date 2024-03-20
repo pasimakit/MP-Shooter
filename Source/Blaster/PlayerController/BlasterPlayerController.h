@@ -3,9 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CommonPlayerController.h"
 #include "GameFramework/PlayerController.h"
 #include "BlasterPlayerController.generated.h"
 
+class UGameSettingsWidget;
+class UCommonActivatableWidget;
 class APlayerState;
 class ABlasterPlayerState;
 class ABlasterGameState;
@@ -21,7 +24,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHighPingDelegate, bool, bPingTooHig
  * 
  */
 UCLASS()
-class BLASTER_API ABlasterPlayerController : public APlayerController
+class BLASTER_API ABlasterPlayerController : public ACommonPlayerController
 {
 	GENERATED_BODY()
 public:
@@ -54,6 +57,10 @@ public:
 	FHighPingDelegate HighPingDelegate;
 
 	void BroadcastElim(APlayerState* Attacker, APlayerState* Victim);
+
+	void SetCommonUIInputMode(bool bMouseVisible, bool bIgnoreLookInput, bool bIgnoreMoveInput);
+
+	bool bIsSettingsOpen = false;
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
@@ -70,7 +77,7 @@ protected:
 	void ServerRequestServerTime(float TimeOfClientRequest);
 
 	// Reports server time
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Client, Reliable)
 	void ClientReportServerTime(float TimeOfClientRequest, float TimeServerReceivedClientRequest);
 
 	// Difference between client and server time
@@ -107,19 +114,22 @@ protected:
 
 	FString GetInfoText(const TArray<ABlasterPlayerState*>& Players);
 	FString GetTeamsInfoText(ABlasterGameState* BlasterGameState);
+
+	UFUNCTION()
+	void ShowMenu(const TSoftClassPtr<UCommonActivatableWidget>& MenuClass) const;
 private:
 	UPROPERTY()
 	ABlasterHUD* BlasterHUD;
 
 	/*
-	* Return to main menu
+	* Game settings
 	*/
-
+	
 	UPROPERTY(EditAnywhere, Category = Menu)
-	TSubclassOf<UUserWidget> ReturnToMainMenuWidget;
+	TSoftClassPtr<UCommonActivatableWidget> GameSettingsWidget;
 
 	UPROPERTY()
-	UReturnToMainMenu* ReturnToMainMenu;
+	UGameSettingsWidget* GameSettings;
 
 	/**
 	* Scoreboard
@@ -127,8 +137,6 @@ private:
 
 	void ScoreboardButton_Pressed();
 	void ScoreboardButton_Released();
-
-	bool bReturnToMainMenuOpen = false;
 
 	UPROPERTY()
 	ABlasterGameMode* BlasterGameMode;

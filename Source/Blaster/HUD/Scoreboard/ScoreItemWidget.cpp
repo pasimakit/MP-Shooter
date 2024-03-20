@@ -1,4 +1,6 @@
 #include "ScoreItemWidget.h"
+
+#include "CommonBorder.h"
 #include "Components/TextBlock.h"
 #include "Blaster/PlayerState/BlasterPlayerState.h"
 #include "Components/Image.h"
@@ -37,5 +39,5 @@ void UScoreItemWidget::SetTextColor()
 
 void UScoreItemWidget::SetBackgroundColor(const FLinearColor Color)
 {
-	Background->SetColorAndOpacity(Color);
+	Border->GetDynamicMaterial()->SetVectorParameterValue("FillColor",  Color);
 }

@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/GameInstance.h"
+#include "CommonGameInstance.h"
 #include "BlasterGameInstance.generated.h"
 
 class UBSaveGame;
@@ -12,11 +12,13 @@ class UBSaveGame;
  * 
  */
 UCLASS()
-class BLASTER_API UBlasterGameInstance : public UGameInstance
+class BLASTER_API UBlasterGameInstance : public UCommonGameInstance
 {
 	GENERATED_BODY()
 
 public:
+	UBlasterGameInstance(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	
 	UPROPERTY(BlueprintReadOnly)
 	FString SaveGameSlotName;
 

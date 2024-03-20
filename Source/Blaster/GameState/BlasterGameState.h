@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Framework/Managers/SGameState.h"
 #include "GameFramework/GameState.h"
 #include "BlasterGameState.generated.h"
 

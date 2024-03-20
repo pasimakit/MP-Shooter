@@ -3,6 +3,7 @@
 
 
 #include "BlasterPlayerController.h"
+#include "PrimaryGameLayout.h"
 #include "Blaster/HUD/BlasterHUD.h"
 #include "Blaster/HUD/CharacterOverlay.h"
 #include "Blaster/HUD/ReturnToMainMenu.h"
@@ -20,6 +21,10 @@
 #include "Blaster/BlasterTypes/Announcement.h"
 #include "Blaster/HUD/Scoreboard/ScoreboardWidget.h"
 #include "Blaster/Framework/BlasterGameInstance.h"
+#include "NativeGameplayTags.h"
+#include "Input/CommonUIActionRouterBase.h"
+
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(TAG_UI_LAYER_MENU, "UI.Layer.Menu", "UI Layer for Menu");
 
 void ABlasterPlayerController::BeginPlay()
 {
@@ -28,6 +33,9 @@ void ABlasterPlayerController::BeginPlay()
 	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
 	ServerCheckMatchState();
 	UBlasterGameInstance* BlasterGameInstance = Cast<UBlasterGameInstance>(GetGameInstance());
+	
+	SetCommonUIInputMode(false, false, false);
+	
 	if (BlasterGameInstance)
 	{
 		BlasterGameInstance->LoadGame();
@@ -100,29 +108,40 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 	}
 }
 
-void ABlasterPlayerController::ShowReturnToMainMenu()
+void ABlasterPlayerController::ShowMenu(const TSoftClassPtr<UCommonActivatableWidget>& MenuClass) const
 {
-	if (ReturnToMainMenuWidget == nullptr) return;
-	if (ReturnToMainMenu == nullptr)
+	if(MenuClass == nullptr) return;
+
+	if(const UWorld* WorldContext = GetWorld())
 	{
-		ReturnToMainMenu = CreateWidget<UReturnToMainMenu>(this, ReturnToMainMenuWidget);
-	}
-	if (ReturnToMainMenu)
-	{
-		bReturnToMainMenuOpen = !bReturnToMainMenuOpen;
-		if (bReturnToMainMenuOpen)
+		if(UPrimaryGameLayout* RootLayout = UPrimaryGameLayout::GetPrimaryGameLayoutForPrimaryPlayer(WorldContext))
 		{
-			ReturnToMainMenu->MenuSetup();
-		}
-		else
-		{
-			ReturnToMainMenu->MenuTeardown();
+			RootLayout->PushWidgetToLayerStackAsync<UCommonActivatableWidget>(TAG_UI_LAYER_MENU, true, MenuClass, [this](EAsyncWidgetLayerState State, UCommonActivatableWidget* Screen)
+			{
+				switch (State)
+				{
+				case EAsyncWidgetLayerState::AfterPush:
+					return;
+				case EAsyncWidgetLayerState::Canceled:
+					return;
+				}
+			});
 		}
 	}
 }
 
-void ABlasterPlayerController::ShowScoreboard(bool bShow)
+
+void ABlasterPlayerController::ShowReturnToMainMenu()
 {
+	if (GameSettingsWidget == nullptr || bIsSettingsOpen) return;
+	
+	SetCommonUIInputMode(true, true, true);
+	ShowMenu(GameSettingsWidget);
+	bIsSettingsOpen = true;
+}
+
+void ABlasterPlayerController::ShowScoreboard(bool bShow)
+	{
 	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	if (BlasterHUD && BlasterHUD->CharacterOverlay)
 	{
@@ -383,6 +402,10 @@ void ABlasterPlayerController::SetHUDMatchCountdown(float CountdownTime)
 void ABlasterPlayerController::SetHUDAnnouncementCountdown(float CountdownTime)
 {
 	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	if(BlasterHUD && BlasterHUD->Announcement == nullptr)
+	{
+		BlasterHUD->AddAnnouncement();
+	}
 	bool bHudValid = BlasterHUD &&
 		BlasterHUD->Announcement &&
 		BlasterHUD->Announcement->WarmupTime;
@@ -611,7 +634,10 @@ void ABlasterPlayerController::HandleCooldown()
 	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 	if (BlasterHUD)
 	{
-		BlasterHUD->CharacterOverlay->RemoveFromParent();
+		if(!BlasterHUD->Announcement)
+		{
+			BlasterHUD->AddAnnouncement();
+		}
 		bool bHUDValid = BlasterHUD->Announcement && 
 			BlasterHUD->Announcement->AnnouncementText && 
 			BlasterHUD->Announcement->InfoText;
@@ -633,6 +659,7 @@ void ABlasterPlayerController::HandleCooldown()
 			}
 		}
 	}
+	ShowScoreboard(true);
 	ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetPawn());
 	if (BlasterCharacter && BlasterCharacter->GetCombat())
 	{
@@ -712,6 +739,48 @@ FString ABlasterPlayerController::GetTeamsInfoText(class ABlasterGameState* Blas
 void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerState* Victim)
 {
 	ClientElimAnnouncement(Attacker, Victim);
+}
+
+void ABlasterPlayerController::SetCommonUIInputMode(bool bMouseVisible, bool bIgnoreLookInput, bool bIgnoreMoveInput)
+{
+	// Make sure the controller is connected to a local player
+	const ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	
+	// We only need the base action router, not our custom one, though none of this
+	// will work the way we want if this hasn't been overridden to use our custom
+	// action router subsystem.
+	if(!LocalPlayer) return;
+	UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>();
+	if (!ActionRouter)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Common UI Action Router subsystem is not available"));
+		return;
+	}
+
+	// Create the new desired UI Input Config
+	FUIInputConfig NewInputConfig;
+	if (bMouseVisible)
+	{
+		// Input settings when mouse is Visible
+		constexpr bool bHideCursorDuringViewportCapture = false;
+		NewInputConfig = FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::CaptureDuringMouseDown, bHideCursorDuringViewportCapture);
+	}
+	else
+	{
+		// Input settings when mouse is Invisible
+		constexpr bool bHideCursorDuringViewportCapture = true;
+		NewInputConfig = FUIInputConfig(ECommonInputMode::Game, EMouseCaptureMode::CapturePermanently_IncludingInitialMouseDown, bHideCursorDuringViewportCapture);
+	}
+
+	// Apply Look/Move ignore switches
+	NewInputConfig.bIgnoreLookInput = bIgnoreLookInput;
+	NewInputConfig.bIgnoreMoveInput = bIgnoreMoveInput;
+
+	// Set mouse visibility just *before* we change the UI Input Config
+	SetShowMouseCursor(bMouseVisible);
+
+	// Tell the Action Router to use this new input config
+	ActionRouter->SetActiveUIInputConfig(NewInputConfig);
 }
 
 void ABlasterPlayerController::ClientElimAnnouncement_Implementation(APlayerState* Attacker, APlayerState* Victim)

@@ -1,4 +1,5 @@
 #include "ReturnToMainMenu.h"
+#include "PrimaryGameLayout.h"
 #include "GameFramework/PlayerController.h"
 #include "Components/Button.h"
 #include "Components/Slider.h"
@@ -8,9 +9,15 @@
 #include "Blaster/Character/BlasterCharacter.h"
 #include "Blaster/Framework/BlasterGameInstance.h"
 
+void UReturnToMainMenu::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	MenuSetup();
+}
+
 void UReturnToMainMenu::MenuSetup()
 {
-	AddToViewport();
 	SetVisibility(ESlateVisibility::Visible);
 	bIsFocusable = true;
 
@@ -21,7 +28,6 @@ void UReturnToMainMenu::MenuSetup()
 		if (PlayerController)
 		{
 			FInputModeGameAndUI InputModeData;
-			InputModeData.SetWidgetToFocus(TakeWidget());
 			PlayerController->SetInputMode(InputModeData);
 			PlayerController->SetShowMouseCursor(true);
 		}
@@ -48,14 +54,6 @@ void UReturnToMainMenu::MenuSetup()
 			SensitivityText->SetText(FText::FromString(FString::SanitizeFloat(BlasterGameInstance->Sensitivity, 1)));
 		}
 	}
-}
-bool UReturnToMainMenu::Initialize()
-{
-	if (!Super::Initialize())
-	{
-		return false;
-	}
-	return true;
 }
 
 void UReturnToMainMenu::OnDestroySession(bool bWasSuccesful)
@@ -87,8 +85,6 @@ void UReturnToMainMenu::OnDestroySession(bool bWasSuccesful)
 
 void UReturnToMainMenu::MenuTeardown()
 {
-	RemoveFromParent();
-
 	UWorld* World = GetWorld();
 	if (World)
 	{
@@ -104,18 +100,11 @@ void UReturnToMainMenu::MenuTeardown()
 				BlasterCharacter->UpdateSensitivity();
 			}
 		}
-	}
-	if (ReturnButton && ReturnButton->OnClicked.IsBound())
-	{
-		ReturnButton->OnClicked.RemoveDynamic(this, &UReturnToMainMenu::ReturnButtonClicked);
-	}
-	if (SensitivitySlider && SensitivitySlider->OnValueChanged.IsBound())
-	{
-		SensitivitySlider->OnValueChanged.RemoveDynamic(this, &UReturnToMainMenu::SensitivitySliderValueChanged);
-	}
-	if (MultiplayerSessionsSubsystem && MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.IsBound())
-	{
-		MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.RemoveDynamic(this, &UReturnToMainMenu::OnDestroySession);
+
+		if(UPrimaryGameLayout* RootLayout = UPrimaryGameLayout::GetPrimaryGameLayoutForPrimaryPlayer(World))
+		{
+			RootLayout->FindAndRemoveWidgetFromLayer(this);
+		}
 	}
 
 	BlasterGameInstance = BlasterGameInstance == nullptr ? Cast<UBlasterGameInstance>(GetGameInstance()) : BlasterGameInstance;
@@ -144,9 +133,14 @@ void UReturnToMainMenu::ReturnButtonClicked()
 	ReturnButton->SetIsEnabled(false);
 
 	UWorld* World = GetWorld();
-
+	
 	if (World)
 	{
+		if(UPrimaryGameLayout* RootLayout = UPrimaryGameLayout::GetPrimaryGameLayoutForPrimaryPlayer(World))
+		{
+			RootLayout->FindAndRemoveWidgetFromLayer(this);
+		}
+		
 		APlayerController* FirstPlayerController = World->GetFirstPlayerController();
 		if (FirstPlayerController)
 		{

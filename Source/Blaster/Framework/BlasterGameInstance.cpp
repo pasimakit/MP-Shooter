@@ -5,6 +5,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "Blaster/Character/BSaveGame.h"
 
+UBlasterGameInstance::UBlasterGameInstance(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer)
+{
+    
+}
+
 void UBlasterGameInstance::LoadGame()
 {
     // Try to load a saved game file (with name: <SaveGameSlotName>.sav) if exists

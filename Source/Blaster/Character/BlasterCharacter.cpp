@@ -538,7 +538,10 @@ void ABlasterCharacter::PlayFireMontage(bool bAiming)
 		AnimInstance->Montage_JumpToSection(SectionName);
 		if(IsLocallyControlled())
 		{
-			BlasterPlayerController->ClientStartCameraShake(Combat->EquippedWeapon->RecoilCameraShake, bAiming ? 0.7f : 1.f);
+			if(BlasterPlayerController)
+			{
+				BlasterPlayerController->ClientStartCameraShake(Combat->EquippedWeapon->RecoilCameraShake, bAiming ? 0.7f : 1.f);
+			}
 		}
 	}
 }

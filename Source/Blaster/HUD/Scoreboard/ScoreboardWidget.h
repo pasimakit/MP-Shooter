@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "CommonActivatableWidget.h"
 #include "ScoreboardWidget.generated.h"
 
 class UVerticalBox;
@@ -22,7 +22,7 @@ struct ScoreItemObject : UObject
  * 
  */
 UCLASS()
-class BLASTER_API UScoreboardWidget : public UUserWidget
+class BLASTER_API UScoreboardWidget : public UCommonActivatableWidget
 {
 	GENERATED_BODY()
 

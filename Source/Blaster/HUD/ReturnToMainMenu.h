@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "CommonActivatableWidget.h"
 #include "ReturnToMainMenu.generated.h"
 
 class USlider;
@@ -13,13 +13,20 @@ class APlayerController;
 class UMultiplayerSessionsSubsystem;
 class UBlasterGameInstance;
 /**
+ * Make this class inherit from UCommonActivatableWidget
+ * Attach it to SPrimaryGameLayout -> Menu ?
+ * Copy the initalization from smenuhostwidget
+ * SMenuMultiplayerWidget has example for creating this widget and attachin to primarygamelayout
  * 
+ * Do the same for scoreboard widget but attach it to GameMenu ?
  */
 UCLASS()
-class BLASTER_API UReturnToMainMenu : public UUserWidget
+class BLASTER_API UReturnToMainMenu : public UCommonActivatableWidget
 {
 	GENERATED_BODY()
 public:
+	virtual void NativeOnInitialized() override;
+	
 	UFUNCTION(BlueprintCallable)
 	void MenuSetup();
 	UFUNCTION(BlueprintCallable)
@@ -33,7 +40,6 @@ public:
 	UPROPERTY(meta = (BindWidget))
 	UTextBlock* SensitivityText;
 protected:
-	virtual bool Initialize() override;
 	UFUNCTION()
 	void OnDestroySession(bool bWasSuccesful);
 	UFUNCTION()

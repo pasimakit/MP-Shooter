@@ -7,6 +7,7 @@
 #include "Blueprint/IUserObjectListEntry.h"
 #include "ScoreItemWidget.generated.h"
 
+class UCommonBorder;
 class UImage;
 class UTextBlock;
 class ABlasterPlayerState;
@@ -40,7 +41,7 @@ public:
 	UTextBlock* KDRatioText;
 
 	UPROPERTY(meta = (BindWidget))
-	UImage* Background;
+	UCommonBorder* Border;
 
 	UPROPERTY()
 	int32 PlayerId;
